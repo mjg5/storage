@@ -3,11 +3,34 @@
 # Matthew Grossman from Princeton HCIL - Jun. 5, 2018
 #
 #Brief Usage:
-
+#    Turn on the camera and enable the handle:
+#        h = Camera_ctrl(0, 'enable')
+#    Initilialization:
+#        Camera_ctrl(h, 'init', temperature) # temperature range: (-50, 50)
+#    Stop fan and cooler:
+#        Camera_ctrl(h, 'finalize')
+#    Disable the handle:
+#        Camera_ctrl(h, 'finalize')
+#    Open or close shutter:
+#        h = Camera_ctrl(h, 'shutter', openflag) 
+#        # openflag: 1 for open, 0 for close
+#    Set readout speed: Camera_ctrl(h, 'readoutspeed', readoutflag)
+#        # readout flag: 1 for fast readout, 0 for high image quality
+#    Exposure properties:
+#        Camera_ctrl(h, 'exposureproperties', start_pos, size_pixels,
+#                    bin_pixels)
+#            # the last three inputs are all 2 tuples with default values of 
+#            # (0,0), (2758, 2208), and (1,1)
+#    Set shutter priority: Camera_ctrl(h, 'shutterpriority', shutterflag)
+#        # shutterflag: 0 for mechanical, 1 for electrical
+#    Take pictures: img = Camera_ctrl(h, 'exposure', exptime)
+#        # exptime is the exposure time you can change
+#    Show camera realtime picture: Camera_ctrl(h, 'realtime')
+#        # can be used during calibration
 
 import win32com.client 
 import matplotlib
-
+import numpy
 
 class Handle:
     """A class that mimics the handle class from matlab and initializes
@@ -28,7 +51,6 @@ def Camera_ctrl(handle, cmd, *args):
     cmd = cmd.lower()
     
     if cmd == 'enable':
-        
         handle = Handle()
         # confirms the camera is connected
         if handle.camera.Connected == False:
@@ -36,7 +58,6 @@ def Camera_ctrl(handle, cmd, *args):
         # gets the camera's serial number
         #handle.serialnum = handle.camera.SerialNumber)
         return handle
-    
     elif cmd == 'init':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
@@ -58,8 +79,6 @@ def Camera_ctrl(handle, cmd, *args):
         # set camera gain to low gain
         if handle.camera.CameraGain != 1:
             handle.camera.CameraGain = 1
-        return 1
-        
     elif cmd == 'shutter':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
@@ -79,7 +98,6 @@ def Camera_ctrl(handle, cmd, *args):
             handle.camera.ManualShutterMode = False
             handle.shutter = 0;
         return handle
-    
     elif cmd == 'exposureproperties':
         if n_argin != 3:
             raise ValueError('Wrong number of input arguments')
@@ -105,22 +123,16 @@ def Camera_ctrl(handle, cmd, *args):
         handle.camera.NumY = size_pixels[1]
         handle.camera.BinX = bin_pixels[0]
         handle.camera.BinY = bin_pixels[1]
-        return 1
-    
     elif cmd == 'shutterpriority':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         shutterflag = args[0]
         handle.camera.ShutterPriority = shutterflag
-        return 1
-    
     elif cmd == 'readout speed':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         readoutflag = args[0]
-        handle.camera.ReadoutSpeed =  readoutflag
-        return 1
-        
+        handle.camera.ReadoutSpeed = readoutflag        
     elif cmd == 'exposure':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
@@ -137,7 +149,13 @@ def Camera_ctrl(handle, cmd, *args):
 #HOW WILL THE SAFEARRAY COME OUT?
         return handle.camera.ImageArray
     elif cmd == 'realtime':
-        pass
+        try:
+            while True:
+                img = Camera_ctrl(handle, 'exposure', 0.0003)
+                imgplot = matplotlib.pyplot.imshow(img)
+                matplotlib.pyplot.show(imgplot)
+        except KeyboardInterrupt:
+            pass
     elif cmd == 'finalize':
         # turn off the camera fan
         if handle.camera.FanMode != 'FanOff':
@@ -146,13 +164,10 @@ def Camera_ctrl(handle, cmd, *args):
         if handle.camera.CoolerOn != False:
             handle.camera.CoolerOn = False
         Camera_ctrl(handle, 'shutter', False)
-        return 1
     elif cmd == 'disable':
         # disconnect camera
         if handle.camera.Connected == True:
             handle.camera.Connected = False
-        return 0
     else:
-        raise ValueError('unknown command:' + cmd)
-        return -1    
+        raise ValueError('unknown command:' + cmd)   
   
