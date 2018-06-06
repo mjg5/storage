@@ -1,6 +1,7 @@
 # camera_ctrl - provides basic control of QSI RS 6.1s CCD camera
 #
 # Matthew Grossman from Princeton HCIL - Jun. 5, 2018
+# Based on a Matlab version developed by He Sun
 #
 #Brief Usage:
 #    Turn on the camera and enable the handle:
@@ -13,7 +14,7 @@
 #        Camera_ctrl(h, 'finalize')
 #    Open or close shutter:
 #        h = Camera_ctrl(h, 'shutter', openflag) 
-#        # openflag: 1 for open, 0 for close
+#        # openflag: True for open, False for close
 #    Set readout speed: Camera_ctrl(h, 'readoutspeed', readoutflag)
 #        # readout flag: 1 for fast readout, 0 for high image quality
 #    Exposure properties:
@@ -42,45 +43,44 @@ def Camera_ctrl(handle, cmd, *args):
         # confirms the camera is connected
         if handle.camera.Connected == False:
             handle.camera.Connected = True
-        # gets the camera's serial number
-        #handle.serialnum = handle.camera.SerialNumber)
+        # sets the default values for the camera
         handle.serialnum = '00602768'
         handle.shutter = True
         handle.defaultstartpos = (0, 0)
         handle.defaultsizepixels = (2758, 2208)
         handle.defaultbinpixels = (1, 1)
         return handle
+    
     elif cmd == 'init':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         # sets the current camera as the main camera
         if handle.camera.IsMainCamera == False:
             handle.camera.IsMainCamera = True
-        # turn on the camera fan
+        # turns on the camera fan
         if handle.camera.FanMode != 'FanFull':
             handle.camera.FanMode = 'FanFull'
-        #handle.camera.FanMode = 'FanOff'
         # enable the CCD cooler
         if handle.camera.CoolerOn != True:
             handle.camera.CoolerOn = True
         # set camera cooling temperature
-#ASK ABOUT USE OF CELL2MAT HERE!!!
         ccdtempc = args[0]
         if handle.camera.CanSetCCDTemperature == True:
             handle.camera.SetCCDTemperature = ccdtempc
         # set camera gain to low gain
         if handle.camera.CameraGain != 1:
             handle.camera.CameraGain = 1
+            
     elif cmd == 'shutter':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         openflag = args[0]
-        if openflag == 1:
+        if openflag == True:
             # Set the camera to manual shutter mode.
             handle.camera.ManualShutterMode = True
             # Open the shutter as specified
             handle.camera.ManualShutterOpen = True
-            handle.shutter = 1
+            handle.shutter = True
         else:
             # Set the camera to manual shutter mode
             handle.camera.ManualShutterMode = True
@@ -88,8 +88,9 @@ def Camera_ctrl(handle, cmd, *args):
             handle.camera.ManualShutterOpen = False
             # Set the camera to auto shutter mode
             handle.camera.ManualShutterMode = False
-            handle.shutter = 0;
+            handle.shutter = False;
         return handle
+    
     elif cmd == 'exposureproperties':
         if n_argin != 3:
             raise ValueError('Wrong number of input arguments')
@@ -102,36 +103,33 @@ def Camera_ctrl(handle, cmd, *args):
             raise ValueError('Wrong dimension of picture size')  
         if len(bin_pixels) != 2:
             raise ValueError('Wrong dimension of binned pixels')
-#ASK WHY COMMENTED OUT
-        #if ((start_pos[0] + size_pixels[0]) * (bin_pixels[0]))
-          #<= defaultsizepixels[0]
-            #raise ValueError('x pixels exceeds chip range!')
-        #if ((start_pos[1] + size_pixels[1]) * (bin_pixels[1]))
-          #<= defaultsizepixels[1]
-            #raise ValueError('y pixels exceeds chip range!')
+        # sends the exposure properties to the camera
         handle.camera.StartX = start_pos[0]
         handle.camera.StartY = start_pos[1]
         handle.camera.NumX = size_pixels[0]
         handle.camera.NumY = size_pixels[1]
         handle.camera.BinX = bin_pixels[0]
         handle.camera.BinY = bin_pixels[1]
+        
     elif cmd == 'shutterpriority':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         shutterflag = args[0]
+        # sends the shutter pririty to the camera
         handle.camera.ShutterPriority = shutterflag
+        
     elif cmd == 'readout speed':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         readoutflag = args[0]
-        handle.camera.ReadoutSpeed = readoutflag        
+        # sends the readout speed to the camera
+        handle.camera.ReadoutSpeed = readoutflag      
+        
     elif cmd == 'exposure':
         if n_argin != 1:
             raise ValueError('Wrong number of input arguments')
         exptime = args[0]
-# THIS DOESN"T SEEM RIGHT
-        if handle.shutter == True or handle.shutter == False:
-            raise ValueError('The shutter statue is incorrect')
+        # Starts an exposure on the camera
         handle.camera.StartExposure(exptime, handle.shutter)
         # Wait for the exposure to complete
         status = handle.camera.ImageReady
@@ -139,15 +137,20 @@ def Camera_ctrl(handle, cmd, *args):
         while status != donestatus:
             status = handle.camera.ImageReady
 #HOW WILL THE SAFEARRAY COME OUT?
+        # gets the image from the camera as some form of array
         return handle.camera.ImageArray
+    
     elif cmd == 'realtime':
+        # creates teh figure
         plt.figure(100)
         plt.title('Real Time Picture')
         plt.tight_layout()
+        # updates the figure with the current image until the figure is closed
         while plt.fignum_exists(100):
             img = Camera_ctrl(handle, 'exposure', 0.0003)
             plt.imshow(img)
             plt.pause(.1)
+            
     elif cmd == 'finalize':
         # turn off the camera fan
         if handle.camera.FanMode != 'FanOff':
@@ -155,9 +158,12 @@ def Camera_ctrl(handle, cmd, *args):
         # disable the CCD cooler
         if handle.camera.CoolerOn != False:
             handle.camera.CoolerOn = False
+        # closes the shutter
         Camera_ctrl(handle, 'shutter', False)
+        handle.shutter = False
+        
     elif cmd == 'disable':
-        # disconnect camera
+        # disconnects camera
         if handle.camera.Connected == True:
             handle.camera.Connected = False
     else:
