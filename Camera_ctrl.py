@@ -28,22 +28,9 @@
 #    Show camera realtime picture: Camera_ctrl(h, 'realtime')
 #        # can be used during calibration
 
-import win32com.client 
-import matplotlib
+from matplotlib import pyplot as plt
 import numpy
-
-class Handle:
-    """A class that mimics the handle class from matlab and initializes
-       to the default values
-       """
-    def __init__(self):
-        self.camera = win32com.client.Dispatch('QSICamera.CCDCamera')
-        self.serialnum = '00602768'
-        self.shutter = True
-        self.defautstartpos = (0, 0)
-        self.defaultsizepixels = (2758, 2208)
-        self.defaultbinpixels = (1, 1)
-
+from CCDCclasses import Handle
 
 def Camera_ctrl(handle, cmd, *args):
     
@@ -57,6 +44,11 @@ def Camera_ctrl(handle, cmd, *args):
             handle.camera.Connected = True
         # gets the camera's serial number
         #handle.serialnum = handle.camera.SerialNumber)
+        handle.serialnum = '00602768'
+        handle.shutter = True
+        handle.defaultstartpos = (0, 0)
+        handle.defaultsizepixels = (2758, 2208)
+        handle.defaultbinpixels = (1, 1)
         return handle
     elif cmd == 'init':
         if n_argin != 1:
@@ -94,7 +86,7 @@ def Camera_ctrl(handle, cmd, *args):
             handle.camera.ManualShutterMode = True
             # Close the shutter as specified
             handle.camera.ManualShutterOpen = False
-            # Set the camera to auto shutter moder
+            # Set the camera to auto shutter mode
             handle.camera.ManualShutterMode = False
             handle.shutter = 0;
         return handle
@@ -149,13 +141,13 @@ def Camera_ctrl(handle, cmd, *args):
 #HOW WILL THE SAFEARRAY COME OUT?
         return handle.camera.ImageArray
     elif cmd == 'realtime':
-        try:
-            while True:
-                img = Camera_ctrl(handle, 'exposure', 0.0003)
-                imgplot = matplotlib.pyplot.imshow(img)
-                matplotlib.pyplot.show(imgplot)
-        except KeyboardInterrupt:
-            pass
+        plt.figure(100)
+        plt.title('Real Time Picture')
+        plt.tight_layout()
+        while plt.fignum_exists(100):
+            img = Camera_ctrl(handle, 'exposure', 0.0003)
+            plt.imshow(img)
+            plt.pause(.1)
     elif cmd == 'finalize':
         # turn off the camera fan
         if handle.camera.FanMode != 'FanOff':
@@ -169,5 +161,4 @@ def Camera_ctrl(handle, cmd, *args):
         if handle.camera.Connected == True:
             handle.camera.Connected = False
     else:
-        raise ValueError('unknown command:' + cmd)   
-  
+        raise ValueError('unknown command:' + cmd)
