@@ -7,23 +7,24 @@ import Camera_ctrl
 import numpy
 import os
 
-class Handle:
-    """ A class that mimics the handle class from matlab and initializes
-       to default values of serialnum: 0, shutter: open, and default starting
-       position, pixel size, and bin pixels to (0,0)
+class Camera:
+    """ A class that mimics the handle class from for cameras matlab and
+    initializes to default values of serialnum: 0, shutter: open, and default
+    starting position, pixel size, and bin pixels to (0,0)
        """
     def __init__(self):
-        self.camera = win32com.client.Dispatch('QSICamera.CCDCamera')
+        self.handle = None
         self.serialnum = '0'
         self.shutter = True
-        self.defautstartpos = (0, 0)
-        self.defaultsizepixels = (0, 0)
-        self.defaultbinpixels = (0, 0)
+        self.startPos = (0, 0)
+        self.imgSize = (0, 0)
+        self.binPix = (0, 0)
+        self.ccdtemp = None
         
-class Camera: 
+class OldCamera: 
     """ A class that represents a camera, along with its handle and actions"""
     def __init__(self):
-        self.handle = Handle()
+        self.handle = None
         self.startPosition
         self.imageSize
         self.binXi
