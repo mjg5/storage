@@ -2,7 +2,7 @@ from ImageProcessing import twoD_Gaussian
 from ImageProcessing import fit_gauss_2D
 import numpy as np
 from matplotlib import pyplot as plt
-def CalibrateLaserMan(Fourier, cPoint, sPoint, cSize, sSize):
+def GaussManual(Fourier, cPoint, sPoint, cSize, sSize):
     centerPat = Fourier[int(cPoint[1] - cSize/2) : int(cPoint[1] + cSize/2),
                         int(cPoint[0] - cSize/2) : int(cPoint[0] + cSize/2)]
     secondaryPat = Fourier[int(sPoint[1] - sSize/2) : int(sPoint[1] + sSize/2),
@@ -15,13 +15,15 @@ def CalibrateLaserMan(Fourier, cPoint, sPoint, cSize, sSize):
     secondaryHeight = secondaryParams[0]
     secondaryX = secondaryParams[1]
     secondaryY = secondaryParams[2]
+    print((centerheight, centerX, centerY), (secondaryHeight, secondaryX,
+           secondaryY))
     return (centerheight, centerX, centerY), (secondaryHeight, secondaryX,
            secondaryY)
                    
-def CalibrateLaser(image, mode, *args):
+def CalibrateLaser(image, mode, resolution, *args):
     image = np.loadtxt('/Users/matthewgrossman/Desktop/ripple3_256x256_ideal_undersized.txt')
     image = np.transpose(image)
-    N = 2**12
+    N = 2**resolution
     largeImage = np.zeros((N, N))
     x = np.ma.size(image, 0)
     y = np.ma.size(image, 1)
@@ -33,6 +35,6 @@ def CalibrateLaser(image, mode, *args):
         pass
 #        CalibrateLaserAuto(Fourier)
     elif mode == 'man':
-        CalibrateLaserMan(Fourier, args[0], args[1], args[2], args[3])
+        GuassManual(Fourier, args[0], args[1], args[2], args[3])
     else:
         print('Unknown calibration command')
