@@ -10,6 +10,8 @@
 #       camera.connect()
 #    Disconect the camera:
 #       camera.disconnect()
+#    Setup the camera:
+#       camera.setup()
 #    Initilialization:
 #        camera.init(ccdtemp) # ccdtemp range: (-50, 50)
 #    Stop fan and cooler:
@@ -37,15 +39,16 @@
 #        # takes numIm exposures of exposure time expTime and averages them
 #    Show camera realtime picture:
 #        camera.realtime()
-#        # can be used during calibration
+#        # can be used during calibration 
 
 from matplotlib import pyplot as plt
 import numpy as np
 import win32com.client
+import os
 
 class Camera:
     """
-    A class that mimics that represents the camera connected to the
+    A class that represents the camera connected to the
     computer. It has functions for connecting and disconnecting, changing
     settings, and taking images.
     """
@@ -201,6 +204,26 @@ class Camera:
             img = img + self.exposure(expTime)
         return img / numIm
     
+    def takeDarkCam(self, expTime, numIm, BinX, BinY):
+        """
+        Takes DarkCam image using avgimg function. It saves the image and then
+        returns it
+        """
+        # get the current directory and set it to folder
+        folder = os.getcwd()
+        # set the properties necessary to take dark image
+        self.shutter(False)
+        self.shutterpriority(0)
+        self.readoutspeed(0)
+        self.exposureproperties((0,0,), (500, 500), (BinX, BinY))
+        # take dark image
+        darkCam = self.avgimg(expTime, numIm)
+        # save picture
+        os.chdir('C:\Lab\FPWC\hardware')
+######### get format for saving picture and then save it
+        os.chdir(folder)
+        return darkCam
+    
     def exposure(self, expTime):
         """
         Returns an image from the camera with exposure time expTime.
@@ -278,3 +301,22 @@ class Camera:
         # disconnects camera
         if self.handle.Connected == True:
             self.handle.Connected = False
+    
+    def setup(self):
+        """
+        Sets up the camera, after it has been connected by setting the shutter
+        priority and exposure properties and taking a new dark frame
+        """
+        # initializes the camrea and sets its temperature
+        self.init(-15)
+        # sets the shutter priority
+        self.ShutterPriority(1)
+        # sets the exposure properties
+        self.exposureproperties(self.startPos, self.imgSize, self.binPix)
+        # takes a new dark frame, if needed
+####### get more details on this
+        if self.newDarkFrame() == True:
+###### figure out what this function is
+    def newDarkFrame(self):
+        pass
+        
