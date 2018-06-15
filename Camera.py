@@ -91,7 +91,7 @@ class Camera:
             self.defaultstartpos = (0, 0)
             self.defaultbinpixels = (1, 1)
             self.shutter(True)
-        except self as ex:
+        except Exception as ex:
             if ex == AttributeError:
                 print('Lost handle of camera, unplug USB manually!')
                 self.handle = None
@@ -316,7 +316,7 @@ class Camera:
         # takes a new dark frame, if needed
 ####### get more details on this
         if self.newDarkFrame() == True:
+            pass
 ###### figure out what this function is
-    def newDarkFrame(self):
-        pass
-        
+#    def newDarkFrame(self):
+#        pass        
