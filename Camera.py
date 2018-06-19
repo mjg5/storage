@@ -67,6 +67,10 @@ class Camera:
         self.binPix = (0, 0)
         self.ccdtemp = None
         self.name = ''
+        self.newDarkFrame = True
+        self.darkFrame = None
+        self.binXi = 4
+        self.binEta = 4
 
     def connect(self):
         """
@@ -86,10 +90,12 @@ class Camera:
                 print(self.handle.__class__.__name__ +
                       'is already connected.')
             # get camera default peramters
+# make this work better
             self.serialnum = self.handle.SerialNumber;
-            self.defaultsizepixels = (self.handle.Numx, self.handle.NumY)
-            self.defaultstartpos = (0, 0)
-            self.defaultbinpixels = (1, 1)
+            self.imgSize = (self.handle.NumX, self.handle.NumY)
+            self.startPos = (self.handle.StartX, self.handle.StartY)
+            self.binPix = (self.handle.BinX, self.handle.BinY)
+            self.ccdtemp = self.handle.SetCCDTemperature
             self.shutter(True)
         except Exception as ex:
             if ex == AttributeError:
@@ -126,8 +132,8 @@ class Camera:
         if self.handle.IsMainCamera == False:
             self.handle.IsMainCamera = True
         # turns on the camera fan
-        if self.handle.FanMode != 'FanFull':
-            self.handle.FanMode = 'FanFull'
+        if self.handle.FanMode != 2:
+            self.handle.FanMode = 2
         # enable the CCD cooler
         if self.handle.CoolerOn != True:
             self.handle.CoolerOn = True
@@ -136,8 +142,8 @@ class Camera:
             self.handle.SetCCDTemperature = ccdtemp
             self.ccdtemp = self.handle.SetCCDTemperature
         # set camera gain to self gain
-        if self.handle.CameraGain != 'CameraGainLow':
-            self.handle.CameraGain = 'CameraGainLow'
+        if self.handle.CameraGain != 1:
+            self.handle.CameraGain = 1
         # set camera shutter priority to electrical
         # 0 for mechanical, 1 for electical
         self.handle.ShutterPriority = 1
@@ -198,10 +204,12 @@ class Camera:
         """
         if self.handle == None:
             raise Exception('Camera not connected.')
-        self.handle.ReadoutSpeed = 'fastReadout'
-        img = np.zeros((self.imgSize[1], self.imgSize[0]), np.int32)
+        self.handle.ReadoutSpeed = 1
+##### ask christain about switching these
+        img = np.zeros((self.imgSize[0], self.imgSize[1]), np.int32)
         for i in range(numIm):
             img = img + self.exposure(expTime)
+        # output is a float64 (2758, 2208) array
         return img / numIm
     
     def takeDarkCam(self, expTime, numIm, BinX, BinY):
@@ -220,7 +228,9 @@ class Camera:
         darkCam = self.avgimg(expTime, numIm)
         # save picture
         os.chdir('C:\Lab\FPWC\hardware')
-######### get format for saving picture and then save it
+######### confirm format for saving picture and then save it
+#        np.savetxt('darkCam.txt', darkCam)
+        np.save('darkCam.npy', darkCam)
         os.chdir(folder)
         return darkCam
     
@@ -236,9 +246,10 @@ class Camera:
         done = self.handle.ImageReady
         while done != True:
             done = self.handle.ImageReady
-#HOW WILL THE SAFEARRAY COME OUT?
-        # gets the image from the camera as some form of array
-        return self.handle.ImageArray
+        # it's a nested tuple of size 2758
+        # converts it to  an int32 array (2758, 2208)
+        exp = self.handle.ImageArray
+        return np.array(exp)
     
     def realtime(self):
         """
@@ -252,8 +263,10 @@ class Camera:
         # updates the figure with the current image until the figure is closed
         while plt.fignum_exists(100):
             img = self.exposure(0.0003)
-            plt.imshow(img)
-            plt.pause(.05)
+            plt.imshow(img, origin = 'lower')
+            cb = plt.colorbar()
+            plt.pause(.1)
+            cb.remove()
     
     def readoutspeed(self, readoutflag):
         """
@@ -283,8 +296,8 @@ class Camera:
         if self.handle == None:
             raise Exception('Camera not connected.')
         # turn off the camera fan
-        if self.handle.FanMode != 'FanOff':
-            self.handle.FanMode = 'FanOff'
+        if self.handle.FanMode != 0:
+            self.handle.FanMode = 0
         # disable the CCD cooler
         if self.handle.CoolerOn != False:
             self.handle.CoolerOn = False
@@ -315,8 +328,11 @@ class Camera:
         self.exposureproperties(self.startPos, self.imgSize, self.binPix)
         # takes a new dark frame, if needed
 ####### get more details on this
-        if self.newDarkFrame() == True:
-            pass
-###### figure out what this function is
-#    def newDarkFrame(self):
-#        pass        
+        if self.newDarkFrame == True:
+            numIm = 30
+            self.darkFrame = self.takeDarkCam(self.expTime, numIm, 
+                                              self.binXi, self.binEta)
+        else:
+            self.darkFrame = np.load('darkCam.npy')
+            # use below if numpy format is no good
+#            self.darkFrame = np.loadtxt('darkCam.txt')
